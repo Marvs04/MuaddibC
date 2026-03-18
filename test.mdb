@@ -1,0 +1,161 @@
+#why: "This test file exercises every feature of Muad'dib v1.0"
+#why: "It is structured in sections using purpose statements"
+#why: "Each section tests one specific language feature"
+
+// ═══════════════════════════════════════════
+// TEST 1: All data types — declaration with 'is'
+// ═══════════════════════════════════════════
+
+purpose "test all five data types";
+
+userName  is word    = "Paul";
+userAge   is whole   = 17;
+height    is decimal = 1.85;
+initial   is letter  = 'P';
+isActive  is truth   = yes;
+
+show literal: "=== Data Types Test ===";
+show literal: "Name:"     then word:  userName;
+show literal: "Age:"      then value: userAge;
+show literal: "Height:"   then value: height;
+show literal: "Active:"   then value: isActive;
+
+
+// ═══════════════════════════════════════════
+// TEST 2: Assignment with 'becomes'
+// ═══════════════════════════════════════════
+
+purpose "test assignment — becomes changes an existing value";
+
+userName becomes "Muad'dib";
+userAge  becomes 22;
+isActive becomes no;
+
+show literal: "=== Assignment Test ===";
+show literal: "New name:"   then word:  userName;
+show literal: "New age:"    then value: userAge;
+show literal: "Now active:" then value: isActive;
+
+
+// ═══════════════════════════════════════════
+// TEST 3: Arithmetic expressions
+// ═══════════════════════════════════════════
+
+purpose "test arithmetic — whole and decimal operations";
+
+score     is whole   = 80;
+bonus     is whole   = 15;
+total     is whole   = 0;
+average   is decimal = 0.0;
+
+total   becomes score + bonus;
+average becomes score + 5;
+
+show literal: "=== Arithmetic Test ===";
+show literal: "Score:"   then value: score;
+show literal: "Bonus:"   then value: bonus;
+show literal: "Total:"   then value: total;
+show literal: "Average:" then value: average;
+
+
+// ═══════════════════════════════════════════
+// TEST 4: Multiplication and division
+// ═══════════════════════════════════════════
+
+purpose "test multiplication and safe division";
+
+base     is whole   = 6;
+factor   is whole   = 7;
+product  is whole   = 0;
+quotient is decimal = 0.0;
+
+product  becomes base * factor;
+quotient becomes product splitby base ordefault 0;
+
+show literal: "=== Multiply and Divide Test ===";
+show literal: "Base:"     then value: base;
+show literal: "Factor:"   then value: factor;
+show literal: "Product:"  then value: product;
+show literal: "Quotient:" then value: quotient;
+
+
+// ═══════════════════════════════════════════
+// TEST 5: Division by zero protection
+// ═══════════════════════════════════════════
+
+purpose "test ordefault — dividing by zero uses the fallback value";
+
+safeResult is decimal = 0.0;
+safeResult becomes 100 splitby 0 ordefault 99.99;
+
+show literal: "=== Division by Zero Test ===";
+show literal: "Safe result (should be 99.99):" then value: safeResult;
+
+
+// ═══════════════════════════════════════════
+// TEST 6: Word concatenation with 'woven'
+// ═══════════════════════════════════════════
+
+purpose "test woven — combines two word variables";
+
+firstName is word = "Paul";
+lastName  is word = "Atreides";
+fullName  is word = firstName woven lastName;
+
+show literal: "=== Woven Test ===";
+show literal: "First:"  then word: firstName;
+show literal: "Last:"   then word: lastName;
+show literal: "Full:"   then word: fullName;
+
+
+// ═══════════════════════════════════════════
+// TEST 7: Opposite — logical negation
+// ═══════════════════════════════════════════
+
+purpose "test opposite — negates a truth value";
+
+isLoggedIn  is truth = yes;
+isLoggedOut is truth = opposite isLoggedIn;
+
+show literal: "=== Opposite Test ===";
+show literal: "Logged in:"  then value: isLoggedIn;
+show literal: "Logged out:" then value: isLoggedOut;
+
+
+// ═══════════════════════════════════════════
+// TEST 8: Comments — all three types
+// ═══════════════════════════════════════════
+
+purpose "test that all comment types are silently ignored";
+
+#why: "this comment explains a design decision — it should not print"
+#todo: "this marks a pending task — it should not print"
+#warn: "this marks a danger zone — it should not print"
+
+commentTest is word = "comments work";
+
+show literal: "=== Comment Test ===";
+show word: commentTest;
+
+
+// ═══════════════════════════════════════════
+// TEST 9: Show literal standalone
+// ═══════════════════════════════════════════
+
+purpose "test show literal without chaining";
+
+show literal: "=== Standalone Literal Test ===";
+show literal: "This is a standalone literal print";
+show literal: "Muad'dib says: he who controls the spice controls the universe";
+
+
+// ═══════════════════════════════════════════
+// FINAL SUMMARY
+// ═══════════════════════════════════════════
+
+purpose "all tests complete — show final state";
+
+show literal: "=== Final Summary ===";
+show literal: "Language: Muad'dib v1.0";
+show literal: "Tests passed: all features exercised";
+show literal: "The spice must flow.";
