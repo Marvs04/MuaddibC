@@ -1,6 +1,5 @@
 # Muad'dib
 
-> *"He who controls the spice controls the universe."* — Frank Herbert, Dune
 
 A programming language designed for **humans first, machines second**.
 
