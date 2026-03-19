@@ -313,6 +313,7 @@ assignment_stmt
             if (sym == NULL) {
                 fprintf(stderr,
                     "[Muad'dib] Error: '%s' not declared.\n", $1);
+                free($3);
             } else if (sym->type == DT_WORD) {
                 Value v; v.sval = $3;
                 symbol_assign($1, v);
@@ -342,14 +343,32 @@ assignment_stmt
         }
     | IDENTIFIER BECOMES YES_VAL SEMICOLON
         {
-            Value v; v.ival = $3;
-            symbol_assign($1, v);
+            Symbol* sym = symbol_lookup($1);
+            if (sym == NULL) {
+                fprintf(stderr,
+                    "[Muad'dib] Error: '%s' not declared.\n", $1);
+            } else if (sym->type == DT_TRUTH) {
+                Value v; v.ival = $3;
+                symbol_assign($1, v);
+            } else {
+                fprintf(stderr,
+                    "[Muad'dib] Error: '%s' is not a truth variable.\n", $1);
+            }
             free($1);
         }
     | IDENTIFIER BECOMES NO_VAL SEMICOLON
         {
-            Value v; v.ival = $3;
-            symbol_assign($1, v);
+            Symbol* sym = symbol_lookup($1);
+            if (sym == NULL) {
+                fprintf(stderr,
+                    "[Muad'dib] Error: '%s' not declared.\n", $1);
+            } else if (sym->type == DT_TRUTH) {
+                Value v; v.ival = $3;
+                symbol_assign($1, v);
+            } else {
+                fprintf(stderr,
+                    "[Muad'dib] Error: '%s' is not a truth variable.\n", $1);
+            }
             free($1);
         }
     | IDENTIFIER BECOMES OPPOSITE IDENTIFIER SEMICOLON
@@ -359,8 +378,15 @@ assignment_stmt
              * 'opposite isActive' means we need the CURRENT value
              * of isActive to negate it. We look it up first.
              */
+            Symbol* dst = symbol_lookup($1);
             Symbol* src = symbol_lookup($4);
-            if (src == NULL || src->type != DT_TRUTH) {
+            if (dst == NULL) {
+                fprintf(stderr,
+                    "[Muad'dib] Error: '%s' not declared.\n", $1);
+            } else if (dst->type != DT_TRUTH) {
+                fprintf(stderr,
+                    "[Muad'dib] Error: '%s' is not a truth variable.\n", $1);
+            } else if (src == NULL || src->type != DT_TRUTH) {
                 fprintf(stderr,
                     "[Muad'dib] Error: 'opposite' requires a truth variable.\n");
             } else {
@@ -538,10 +564,13 @@ show_stmt
             printf("%s\n", $4);
             free($4);
         }
-    | SHOW LITERAL COLON STRING_LIT THEN show_chain SEMICOLON
+    | SHOW LITERAL COLON STRING_LIT THEN
         {
             printf("%s ", $4);
             free($4);
+        }
+      show_chain SEMICOLON
+        {
             /* show_chain prints the rest and handles its own newline */
         }
     | SHOW VALUE COLON IDENTIFIER SEMICOLON

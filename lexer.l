@@ -92,16 +92,16 @@ WHITESPACE  [ \t\r]+
 
 %%
 
-/*
- * ── RULES ────────────────────────────────────────────────────────────────
- * Format: PATTERN   { action }
- *
- * CRITICAL ORDER NOTE:
- * Keywords MUST come before IDENTIFIER. Flex uses longest-match-first,
- * then first-rule-first for ties. "is" has length 2. An IDENTIFIER
- * starting with 'i' also has length 2 minimum. So we list keywords
- * first to guarantee they're recognized as keywords, not identifiers.
- */
+ /*
+  * ── RULES ────────────────────────────────────────────────────────────────
+  * Format: PATTERN   { action }
+  *
+  * CRITICAL ORDER NOTE:
+  * Keywords MUST come before IDENTIFIER. Flex uses longest-match-first,
+  * then first-rule-first for ties. "is" has length 2. An IDENTIFIER
+  * starting with 'i' also has length 2 minimum. So we list keywords
+  * first to guarantee they're recognized as keywords, not identifiers.
+  */
 
  /* ── WHITESPACE AND NEWLINES ────────────────────────────────────────── */
 
@@ -241,7 +241,9 @@ WHITESPACE  [ \t\r]+
                      * We strdup to own the memory — yytext is overwritten
                      * on the next token.
                      */
-                    yylval.sval = strndup(yytext + 1, yyleng - 2);
+                    yylval.sval = malloc(yyleng - 1);
+                    strncpy(yylval.sval, yytext + 1, yyleng - 2);
+                    yylval.sval[yyleng - 2] = '\0';
                     return STRING_LIT;
                 }
 

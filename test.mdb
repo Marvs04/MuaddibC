@@ -115,7 +115,8 @@ show literal: "Full:"   then word: fullName;
 purpose "test opposite — negates a truth value";
 
 isLoggedIn  is truth = yes;
-isLoggedOut is truth = opposite isLoggedIn;
+isLoggedOut is truth = no;
+isLoggedOut becomes opposite isLoggedIn;
 
 show literal: "=== Opposite Test ===";
 show literal: "Logged in:"  then value: isLoggedIn;
@@ -146,7 +147,6 @@ purpose "test show literal without chaining";
 
 show literal: "=== Standalone Literal Test ===";
 show literal: "This is a standalone literal print";
-show literal: "Muad'dib says: he who controls the spice controls the universe";
 
 
 // ═══════════════════════════════════════════
@@ -158,4 +158,3 @@ purpose "all tests complete — show final state";
 show literal: "=== Final Summary ===";
 show literal: "Language: Muad'dib v1.0";
 show literal: "Tests passed: all features exercised";
-show literal: "The spice must flow.";

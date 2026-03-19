@@ -36,6 +36,9 @@ void symbol_declare(const char* name, DataType type, Value value) {
         fprintf(stderr,
             "[Muad'dib] Error: Variable '%s' was already declared. "
             "Use 'becomes' to change its value.\n", name);
+        if (type == DT_WORD && value.sval != NULL) {
+            free(value.sval);
+        }
         return;
     }
 

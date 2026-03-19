@@ -27,7 +27,7 @@ CFLAGS = -Wall -Wextra -g
 # The Flex runtime library (libfl) provides the default yywrap() implementation
 # and other Flex internals. We link against it so the linker can find
 # those symbols. On some systems this is -lfl, on others -ll.
-LIBS   = -lfl
+LIBS   =
 
 # ── OUTPUT ──────────────────────────────────────────────────────────────────
 TARGET = muaddib

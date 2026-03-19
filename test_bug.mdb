@@ -1,0 +1,5 @@
+purpose "test bypass type check";
+userName is word = "Paul";
+userName becomes yes;
+show literal: "Segfault incoming...";
+show word: userName;
