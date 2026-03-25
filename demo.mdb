@@ -1,0 +1,36 @@
+#why: "programa de demostración de Muaddib"
+
+purpose "declarar variables";
+name is word = "Muaddib";
+age is whole = 18;
+height is decimal = 1.80;
+active is truth = yes;
+
+purpose "mostrar valores iniciales";
+show literal: "Nombre: " then word: name;
+show literal: "Edad: " then value: age;
+show literal: "Altura: " then value: height;
+show literal: "Activo: " then value: active;
+
+purpose "reasignar variables";
+name becomes "Paul";
+age becomes 17;
+
+purpose "mostrar valores nuevos";
+show literal: "Nombre actualizado: " then word: name;
+show literal: "Edad actualizada: " then value: age;
+
+purpose "operación aritmética";
+resultado is whole = 0;
+resultado becomes age + 2;
+show literal: "Edad + 2: " then value: resultado;
+
+purpose "concatenación de texto";
+titulo is word = "Atreides";
+nombreCompleto is word = name woven titulo;
+show literal: "Nombre completo: " then word: nombreCompleto;
+
+purpose "división segura";
+cociente is decimal = 0.0;
+cociente becomes age splitby 4 ordefault 0.0;
+show literal: "Edad dividida entre 4: " then value: cociente;

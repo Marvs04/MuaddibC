@@ -1,0 +1,106 @@
+#why: "scope test - demonstrates 3 levels of nesting and shadowing"
+
+// ─────────────────────────────────────────────────────
+// LEVEL 0: Global scope
+// Variables declared here live for the whole program.
+// ─────────────────────────────────────────────────────
+
+purpose "declare global variables";
+
+userName is word  = "Global-Paul";
+score    is whole = 100;
+isAdmin  is truth = no;
+
+show literal: "=== LEVEL 0 (global) ===";
+show literal: "userName:" then word:  userName;
+show literal: "score:"    then value: score;
+
+// ─────────────────────────────────────────────────────
+// LEVEL 1: First vision block
+// userName shadows the global one — compiler warns us.
+// score is NOT redeclared — becomes reaches the global.
+// ─────────────────────────────────────────────────────
+
+vision "level-one"
+
+    purpose "shadow userName at level 1";
+
+    userName is word  = "Vision1-Paul";
+    localOne is whole = 11;
+
+    score becomes 200;
+
+    show literal: "=== LEVEL 1 (vision: level-one) ===";
+    show literal: "userName (shadowed):" then word:  userName;
+    show literal: "score (global updated):" then value: score;
+    show literal: "localOne:" then value: localOne;
+
+    // ─────────────────────────────────────────────────
+    // LEVEL 2: Second vision inside the first
+    // userName shadows AGAIN — two levels deep.
+    // localOne from level 1 is visible here.
+    // ─────────────────────────────────────────────────
+
+    vision "level-two"
+
+        purpose "shadow userName again at level 2";
+
+        userName is word  = "Vision2-Paul";
+        localTwo is whole = 22;
+
+        show literal: "=== LEVEL 2 (vision: level-two) ===";
+        show literal: "userName (double shadow):" then word:  userName;
+        show literal: "localOne (from level 1):"  then value: localOne;
+        show literal: "localTwo:" then value: localTwo;
+        show literal: "score (still global):" then value: score;
+
+        // ─────────────────────────────────────────────
+        // LEVEL 3: Third vision — deepest nesting
+        // All outer variables are still visible.
+        // localThree only exists here.
+        // ─────────────────────────────────────────────
+
+        vision "level-three"
+
+            purpose "deepest scope - level 3";
+
+            localThree is whole = 33;
+            userName   is word  = "Vision3-Paul";
+
+            show literal: "=== LEVEL 3 (vision: level-three) ===";
+            show literal: "userName (triple shadow):" then word:  userName;
+            show literal: "localOne:"   then value: localOne;
+            show literal: "localTwo:"   then value: localTwo;
+            show literal: "localThree:" then value: localThree;
+            show literal: "score:"      then value: score;
+
+        end;
+
+        // Back at level 2 — localThree is gone
+        show literal: "=== BACK AT LEVEL 2 ===";
+        show literal: "userName (back to vision2):" then word: userName;
+        show literal: "localTwo still here:" then value: localTwo;
+
+    end;
+
+    // Back at level 1 — localTwo is gone
+    show literal: "=== BACK AT LEVEL 1 ===";
+    show literal: "userName (back to vision1):" then word: userName;
+    show literal: "localOne still here:" then value: localOne;
+
+end;
+
+// ─────────────────────────────────────────────────────
+// Back at global scope
+// Global userName was never touched — still "Global-Paul"
+// score was updated from level 1 — change persists globally
+// ─────────────────────────────────────────────────────
+
+purpose "verify global scope after all visions closed";
+
+show literal: "=== BACK AT GLOBAL ===";
+show literal: "userName (original global):" then word:  userName;
+show literal: "score (updated inside vision):" then value: score;
+show literal: "isAdmin (never touched):" then value: isAdmin;
+
+show literal: "Test complete.";

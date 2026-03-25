@@ -1,0 +1,314 @@
+// ═══════════════════════════════════════════════════════════════
+// Muad'dib Language — Dictionary & Rules Reference
+// ═══════════════════════════════════════════════════════════════
+//
+// This file is a COMMENTED REFERENCE, not a runnable program.
+// It explains every rule of the language with examples.
+// Read top to bottom. Each section = one concept.
+//
+// ═══════════════════════════════════════════════════════════════
+
+
+// ───────────────────────────────────────────
+// RULE 1: purpose
+// ───────────────────────────────────────────
+//
+// Every logic block MUST start with a purpose statement.
+// It is not a comment. It is part of the grammar.
+// If you skip it, the parser rejects your code.
+//
+// WHY: Forces you to say what you are about to do.
+//      In every other language this is optional and skipped.
+//      Here it is a compile requirement.
+//
+// SYNTAX:
+//   purpose "your intent here";
+//
+// EXAMPLE:
+
+purpose "show the dictionary reference";
+
+
+// ───────────────────────────────────────────
+// RULE 2: Data Types
+// ───────────────────────────────────────────
+//
+// Muad'dib has 5 types. Names were chosen so any person
+// can read them without knowing programming terminology.
+//
+//   whole    → integer number, no decimals       (int)
+//   decimal  → number with decimal point         (double)
+//   letter   → a single character                (char)
+//   word     → a string of text                  (string)
+//   truth    → logical value, only yes or no     (bool)
+//
+// WHY not int, double, char, string, bool?
+//   "int" is short for "integer" — a math term.
+//   "whole" means "a complete number with no parts."
+//   Anyone can understand "whole" without prior CS knowledge.
+//   Same logic applies to all five type names.
+//
+// SYNTAX:
+//   identifier is TYPE = value;
+//
+// EXAMPLES:
+
+purpose "declare one of each data type";
+
+userName  is word    = "Paul";
+userAge   is whole   = 17;
+userScore is decimal = 9.5;
+initial   is letter  = 'P';
+isActive  is truth   = yes;
+
+
+// ───────────────────────────────────────────
+// RULE 3: Identifiers (variable names)
+// ───────────────────────────────────────────
+//
+// Rules enforced by the LEXER (not a style guide — a hard rule):
+//   - Must start with a lowercase letter
+//   - Can contain letters and digits after that
+//   - Uses camelCase for multiple words
+//   - NO underscores, NO hyphens, NO starting with uppercase
+//
+// WHY camelCase enforced at lexer level?
+//   Python uses snake_case. Java uses camelCase.
+//   JavaScript uses both in the same project.
+//   That debate wastes time. Muad'dib picks one and enforces it.
+//   If you write user_name -> lexer error. No debate. No config.
+//   Same philosophy as Go's gofmt: the language decides.
+//
+// REGEX used in lexer: [a-z][a-zA-Z0-9]*
+//   [a-z]        = must start lowercase
+//   [a-zA-Z0-9]* = can continue with letters or digits
+//   No underscore in the character class = underscore rejected
+//
+// VALID:   userName, userAge, x, totalScore, item2
+// INVALID: UserName, user_name, 2fast, is, becomes
+
+
+// ───────────────────────────────────────────
+// RULE 4: is vs becomes
+// ───────────────────────────────────────────
+//
+// This is the most important rule in Muad'dib.
+//
+//   is       → DECLARATION. Creates the variable for the first time.
+//   becomes  → ASSIGNMENT.  Changes an already existing variable.
+//
+// WHY two different keywords?
+//   In C, Java, JavaScript: int x = 5; and x = 10; look almost identical.
+//   One creates. One changes. Both use =.
+//   That confusion causes real bugs for beginners — and sometimes pros.
+//   Muad'dib makes them LOOK different because they ARE different.
+//
+// RULE: You cannot use becomes on a variable that was never declared.
+//       You cannot use is on a variable that already exists.
+//       The symbol table enforces both rules at runtime.
+//
+// SYNTAX:
+//   identifier is TYPE = value;       ← declaration
+//   identifier becomes newValue;      ← assignment
+//
+// EXAMPLE:
+
+purpose "demonstrate is vs becomes";
+
+demoName is word = "Leto";
+demoName becomes "Paul";
+
+demoAge is whole = 0;
+demoAge becomes 17;
+
+
+// ───────────────────────────────────────────
+// RULE 5: show — printing to screen
+// ───────────────────────────────────────────
+//
+// show has qualifiers that tell it WHAT kind of thing you are printing.
+// You cannot just write: show userName
+// You must say: show word: userName
+//
+// WHY qualifiers?
+//   print(variable) vs print("variable") confuses beginners constantly.
+//   With qualifiers you must declare whether you are printing
+//   a literal text or a variable. The syntax forces understanding.
+//
+// QUALIFIERS:
+//   literal  → prints text written directly in quotes
+//   value    → prints a numeric or truth variable
+//   word     → prints a word variable
+//
+// CHAINING with then:
+//   show literal: "text" then value: someNumber;
+//   Prints both on the same line. One statement, one output line.
+//
+// EXAMPLES:
+
+purpose "demonstrate all show forms";
+
+show literal: "hello from Muad'dib";
+show literal: "Name:"  then word:  userName;
+show literal: "Age:"   then value: userAge;
+show literal: "Score:" then value: userScore;
+
+
+// ───────────────────────────────────────────
+// RULE 6: Comments — three categories
+// ───────────────────────────────────────────
+//
+// Muad'dib has three structured comment types plus a general one.
+// All are ignored at runtime. They exist for the human reader.
+//
+//   //        → general comment, no category
+//   #why:     → explains a design decision
+//   #todo:    → marks something to implement later
+//   #warn:    → flags something that can go wrong
+//
+// WHY categories?
+//   A wall of // comments is noise.
+//   Knowing that a comment is a REASON vs a WARNING vs a TASK
+//   is completely different information.
+//   Large codebases do this with JSDoc, annotations, etc.
+//   Muad'dib bakes it into the language from day one.
+//
+// EXAMPLES (all ignored by compiler):
+
+#why:  "we use whole here because age has no decimal part"
+#todo: "add validation for minimum age"
+#warn: "score can be zero if user has no activity"
+
+// general comment — just a note
+
+
+// ───────────────────────────────────────────
+// RULE 7: woven — string concatenation
+// ───────────────────────────────────────────
+//
+// woven joins two word variables into one new word.
+//
+// WHY not use + for strings?
+//   In JavaScript: "3" + 3 = "33"  (concatenation)
+//   In Python:     "3" + 3 = error (type mismatch)
+//   In C:          doesn't work at all
+//   + is overloaded. It means different things in different languages.
+//   woven means exactly one thing: join two pieces of text.
+//   No ambiguity. Ever.
+//
+// SYNTAX:
+//   newVar is word = varA woven varB;
+//   newVar becomes varA woven varB;
+//   newVar becomes varA woven "literal text";
+//
+// EXAMPLE:
+
+purpose "demonstrate woven";
+
+fName    is word = "Paul";
+lName    is word = "Atreides";
+fullName is word = fName woven lName;
+
+show literal: "Full name:" then word: fullName;
+
+
+// ───────────────────────────────────────────
+// RULE 8: splitby ordefault — safe division
+// ───────────────────────────────────────────
+//
+// Division in Muad'dib REQUIRES you to handle the zero case.
+// You cannot just divide. You must say what happens if it breaks.
+//
+// WHY?
+//   Division by zero is a runtime crash in C, Python, JavaScript.
+//   You only discover it when the program explodes.
+//   Muad'dib forces the decision AT WRITE TIME.
+//   This is error handling baked into arithmetic syntax.
+//   No other common language does this.
+//
+// SYNTAX:
+//   result becomes a splitby b ordefault fallback;
+//
+//   If b is zero → result gets fallback value
+//   If b is not zero → result gets a/b
+//
+// EXAMPLE:
+
+purpose "demonstrate safe division";
+
+points   is whole   = 90;
+games    is whole   = 3;
+average  is decimal = 0.0;
+broken   is decimal = 0.0;
+
+average becomes points splitby games ordefault 0.0;
+broken  becomes points splitby 0     ordefault 99.99;
+
+show literal: "Average (90/3):"   then value: average;
+show literal: "Protected (x/0):"  then value: broken;
+
+
+// ───────────────────────────────────────────
+// RULE 9: opposite — logical negation
+// ───────────────────────────────────────────
+//
+// opposite flips a truth value from yes to no or no to yes.
+//
+// WHY not use ! like every other language?
+//   !isActive and isActive look almost the same when reading fast.
+//   The ! is a single character — easy to miss, easy to skip.
+//   Bugs caused by a missing ! are notoriously hard to find.
+//   "opposite" is a full word. You cannot miss it.
+//   You cannot accidentally delete it while refactoring.
+//
+// SYNTAX:
+//   result is truth = opposite sourceVar;
+//   result becomes opposite sourceVar;
+//
+// EXAMPLE:
+
+purpose "demonstrate opposite";
+
+isLoggedIn  is truth = yes;
+isLoggedOut is truth = opposite isLoggedIn;
+
+show literal: "Logged in:"  then value: isLoggedIn;
+show literal: "Logged out:" then value: isLoggedOut;
+
+
+// ───────────────────────────────────────────
+// RULE 10: Arithmetic operators
+// ───────────────────────────────────────────
+//
+// Standard operators work as expected on whole and decimal types.
+//   +   addition
+//   -   subtraction
+//   *   multiplication
+//   /   division (prefer splitby for safety)
+//
+// Operator precedence is declared in the parser with %left:
+//   %left PLUS MINUS       (lower precedence)
+//   %left MULT DIV         (higher precedence)
+//
+// WHY %left and not just writing the rules?
+//   Without precedence declarations, 2 + 3 * 4 could parse as
+//   (2+3)*4 = 20 instead of 2+(3*4) = 14.
+//   %left MULT DIV listed AFTER %left PLUS MINUS tells Bison:
+//   multiplication binds tighter. Same rule as grade school math.
+//
+// EXAMPLE:
+
+purpose "demonstrate arithmetic precedence";
+
+calcA is whole = 0;
+calcB is whole = 0;
+
+calcA becomes 2 + 3 * 4;
+calcB becomes 10 - 4 / 2;
+
+show literal: "2 + 3 * 4 =" then value: calcA;
+show literal: "10 - 4 / 2 =" then value: calcB;
+
+// ═══════════════════════════════════════════════════════════════
+// END OF DICTIONARY
+// ═══════════════════════════════════════════════════════════════

@@ -55,20 +55,31 @@ double safe_divide(double a, double b, double fallback) {
 /*
  * ── BISON DECLARATIONS ───────────────────────────────────────────────────
  */
-
+ *   2 + 3 * 4 = 2 + (3 * 4) = 14, NOT (2 + 3) * 4 = 20
 /*
- * WHY %union?
- * The parser needs to pass values between rules (e.g., the integer
- * value of a WHOLE_LIT token, or the string of an IDENTIFIER).
- * %union defines a C union that Bison uses for yylval — the same
- * union we referenced in the lexer with yylval.ival, yylval.sval, etc.
- *
- * WHY these specific fields?
- * - ival: whole numbers and truth values (int is enough)
- * - dval: decimal numbers (double for precision)
- * - cval: single characters
- * - sval: strings and identifiers (heap-allocated char*)
+%{
+/*
+ * parser.y - Muad'dib Parser (v2: scope support)
  */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "symbols.h"
+
+extern int line_num;
+void yyerror(const char* msg);
+
+double safe_divide(double a, double b, double fallback) {
+    if (b == 0.0) {
+        fprintf(stderr,
+            "[Muad'dib] Warning: division by zero. Using ordefault.\n");
+        return fallback;
+    }
+    return a / b;
+}
+%}
+
 %union {
     int    ival;
     double dval;
@@ -76,100 +87,44 @@ double safe_divide(double a, double b, double fallback) {
     char*  sval;
 }
 
-/*
- * ── TOKEN DECLARATIONS ───────────────────────────────────────────────────
- *
- * WHY declare types for tokens?
- * When a token carries a value (like WHOLE_LIT carrying an integer),
- * we tell Bison which union field to use with <fieldname>.
- * Tokens without values (like SEMICOLON) need no type declaration.
- */
-
 /* keywords */
 %token IS_TOKEN BECOMES PURPOSE SHOW THEN
 %token OPPOSITE WOVEN SPLITBY ORDEFAULT
 %token LITERAL VALUE
+%token VISION END
 
 /* type keywords */
 %token TYPE_WHOLE TYPE_DECIMAL TYPE_LETTER TYPE_WORD TYPE_TRUTH
 
-/* boolean values — carry integer 1 or 0 */
+/* valued tokens */
 %token <ival> YES_VAL NO_VAL
-
-/* literals — carry their actual values */
-%token <ival>  WHOLE_LIT
-%token <dval>  DECIMAL_LIT
-%token <cval>  CHAR_LIT
-%token <sval>  STRING_LIT
-
-/* identifier — carries its name as a string */
-%token <sval>  IDENTIFIER
+%token <ival> WHOLE_LIT
+%token <dval> DECIMAL_LIT
+%token <cval> CHAR_LIT
+%token <sval> STRING_LIT IDENTIFIER
 
 /* punctuation */
-%token EQUALS COLON SEMICOLON
-%token PLUS MINUS MULT DIV
+%token EQUALS COLON SEMICOLON PLUS MINUS MULT DIV
 
-/*
- * ── NON-TERMINAL TYPES ───────────────────────────────────────────────────
- *
- * WHY declare types for non-terminals?
- * Grammar rules can compute values (like an expression that evaluates
- * to a number). We need to tell Bison which union field carries that
- * value. Here, expressions evaluate to doubles for simplicity.
- *
- * WHY double for expr and NOT a union of types?
- * Because at this stage, arithmetic expressions in Muad'dib only
- * involve whole and decimal numbers. Using double for all computed
- * values avoids type-checking complexity in the grammar actions.
- * A production compiler would track types carefully — we note that
- * this is a simplification.
- */
+/* non-terminal types */
 %type <dval> expr
 %type <sval> word_expr
 
-/*
- * ── OPERATOR PRECEDENCE ──────────────────────────────────────────────────
- *
- * WHY %left for arithmetic operators?
- * Operator precedence in Bison is declared from LOWEST to HIGHEST.
- * Rules on the SAME line have equal precedence.
- * %left means the operator is left-associative:
- *   3 - 2 - 1 = (3 - 2) - 1 = 0, NOT 3 - (2 - 1) = 2
- *
- * WHY PLUS/MINUS on one line and MULT/DIV on another?
- * Because multiplication and division have HIGHER precedence than
- * addition and subtraction. By listing MULT/DIV AFTER PLUS/MINUS,
- * Bison gives them higher precedence. This is how:
- *   2 + 3 * 4 = 2 + (3 * 4) = 14, NOT (2 + 3) * 4 = 20
- * works correctly — the same rule your math teacher taught you.
- */
+/* precedence: lower to higher */
 %left PLUS MINUS
 %left MULT DIV
 
 %%
 
 /*
- * ── GRAMMAR RULES ────────────────────────────────────────────────────────
- *
- * Format:
- *   rule_name : alternative1
- *             | alternative2
- *             ;
- *
- * Actions in { } are C code that runs when the rule is REDUCED.
- * $1, $2, $3... refer to the values of the symbols in the rule.
- * $$ is the value this rule produces (used by parent rules).
- */
-
-/*
- * WHY 'program' as the start rule?
- * Every Bison grammar needs a start symbol — the top-level rule that
- * matches the entire input. 'program' is a sequence of zero or more
- * statements. The empty alternative (nothing) handles empty programs.
+ * WHY call scope_init() in the program rule?
+ * The global scope must exist before any statement executes.
+ * Putting it here guarantees it runs exactly once, before everything.
+ * We cannot put it in main() because the parser controls execution flow.
  */
 program
-    : statement_list
-    | /* empty program is valid */
+    : { scope_init(); } statement_list
+    | { scope_init(); }
     ;
 
 statement_list
@@ -177,50 +132,54 @@ statement_list
     | statement
     ;
 
-/*
- * WHY list all statement types here?
- * This is the DISPATCH point. Bison sees a token and decides which
- * grammar rule to try. By listing all statement types as alternatives
- * of 'statement', we keep the grammar flat and readable.
- */
 statement
     : purpose_stmt
     | declaration_stmt
     | assignment_stmt
     | show_stmt
+    | vision_stmt
     ;
 
-/* ── PURPOSE STATEMENT ──────────────────────────────────────────────────── */
+/* ── PURPOSE ──────────────────────────────────────────────────────────── */
 
-/*
- * purpose "some description" ;
- *
- * WHY does purpose_stmt consume STRING_LIT and SEMICOLON?
- * purpose is a required structural marker. We parse it and print
- * a visual separator at runtime so the output is organized.
- * The string content is the programmer's stated intent — we print
- * it to show the program is running each section.
- */
-purpose_stmt
+             * not just an operator, it's a fallback contract. Keeping it
     : PURPOSE STRING_LIT SEMICOLON
         {
             printf("\n--- %s ---\n", $2);
-            free($2);  /* we printed it, we own it, we free it */
+            free($2);
         }
     ;
 
-/* ── DECLARATION STATEMENT ──────────────────────────────────────────────── */
+/* ── VISION BLOCK ─────────────────────────────────────────────────────── */
 
 /*
- * identifier is TYPE = value ;
+ * vision "name"
+ *     ...statements...
+ * end
  *
- * WHY separate grammar rules for each type?
- * Each type has a DIFFERENT value type (int vs double vs char vs string).
- * If we used one rule, we'd need a complex union value to carry any
- * possible type. Separate rules mean each action knows exactly what
- * type it's working with. Verbose but clear and safe.
+ * WHY is push_scope() in the middle of the rule?
+ * Bison executes actions AS it reduces. By putting the push action
+ * AFTER the VISION STRING_LIT tokens but BEFORE statement_list,
+ * we guarantee the scope is open before any inner statements execute.
+ *
+ * This is a mid-rule action — { push_scope($2); } fires at that
+ * exact point in the parse, not at the end of the whole rule.
+ * It's one of Bison's more powerful (and slightly weird) features.
+ *
+ * WHY free($2) after push_scope?
+ * push_scope() calls strdup internally — it owns its copy.
+ * $2 was strdup'd by the lexer. We own that copy. We free it.
+ * Two different copies, two different owners. No double-free.
  */
-declaration_stmt
+vision_stmt
+    : VISION STRING_LIT { push_scope($2); free($2); }
+      statement_list
+      END SEMICOLON     { pop_scope(); }
+    ;
+
+/* ── DECLARATIONS ─────────────────────────────────────────────────────── */
+
+             * in the assignment rule makes it clear this is a complete
     : IDENTIFIER IS_TOKEN TYPE_WHOLE EQUALS WHOLE_LIT SEMICOLON
         {
             Value v; v.ival = $5;
@@ -253,7 +212,7 @@ declaration_stmt
         }
     | IDENTIFIER IS_TOKEN TYPE_WORD EQUALS STRING_LIT SEMICOLON
         {
-            Value v; v.sval = $5; /* ownership transferred — don't free $5 */
+            Value v; v.sval = $5;
             symbol_declare($1, DT_WORD, v);
             free($1);
         }
@@ -277,23 +236,13 @@ declaration_stmt
         }
     ;
 
-/* ── ASSIGNMENT STATEMENT ───────────────────────────────────────────────── */
+/* ── ASSIGNMENTS ──────────────────────────────────────────────────────── */
 
-/*
- * identifier becomes value ;
- *
- * WHY check the symbol's existing type when assigning?
- * Muad'dib is statically typed — once a variable is declared as 'whole',
- * it stays 'whole'. We look it up, read its type, and use the right
- * union field. A type mismatch is reported as an error.
- */
 assignment_stmt
     : IDENTIFIER BECOMES expr SEMICOLON
         {
             Symbol* sym = symbol_lookup($1);
             if (sym == NULL) {
-                fprintf(stderr,
-                    "[Muad'dib] Error: '%s' not declared. Use 'is' first.\n", $1);
             } else if (sym->type == DT_WHOLE) {
                 Value v; v.ival = (int)$3;
                 symbol_assign($1, v);
@@ -301,24 +250,18 @@ assignment_stmt
                 Value v; v.dval = $3;
                 symbol_assign($1, v);
             } else {
-                fprintf(stderr,
-                    "[Muad'dib] Error: Cannot assign a number to '%s' "
-                    "(it is not whole or decimal).\n", $1);
+                fprintf(stderr, "[Muad'dib] Error: type mismatch for '%s'.\n", $1);
             }
             free($1);
         }
     | IDENTIFIER BECOMES STRING_LIT SEMICOLON
         {
             Symbol* sym = symbol_lookup($1);
-            if (sym == NULL) {
-                fprintf(stderr,
-                    "[Muad'dib] Error: '%s' not declared.\n", $1);
-            } else if (sym->type == DT_WORD) {
+            if (sym != NULL && sym->type == DT_WORD) {
                 Value v; v.sval = $3;
                 symbol_assign($1, v);
             } else {
-                fprintf(stderr,
-                    "[Muad'dib] Error: '%s' is not a word variable.\n", $1);
+                fprintf(stderr, "[Muad'dib] Error: type mismatch for '%s'.\n", $1);
                 free($3);
             }
             free($1);
@@ -326,16 +269,11 @@ assignment_stmt
     | IDENTIFIER BECOMES word_expr SEMICOLON
         {
             Symbol* sym = symbol_lookup($1);
-            if (sym == NULL) {
-                fprintf(stderr,
-                    "[Muad'dib] Error: '%s' not declared.\n", $1);
-                free($3);
-            } else if (sym->type == DT_WORD) {
+            if (sym != NULL && sym->type == DT_WORD) {
                 Value v; v.sval = $3;
                 symbol_assign($1, v);
             } else {
-                fprintf(stderr,
-                    "[Muad'dib] Error: '%s' is not a word variable.\n", $1);
+                fprintf(stderr, "[Muad'dib] Error: type mismatch for '%s'.\n", $1);
                 free($3);
             }
             free($1);
@@ -354,28 +292,179 @@ assignment_stmt
         }
     | IDENTIFIER BECOMES OPPOSITE IDENTIFIER SEMICOLON
         {
-            /*
-             * WHY look up $4 (the source) before assigning to $1?
-             * 'opposite isActive' means we need the CURRENT value
-             * of isActive to negate it. We look it up first.
-             */
             Symbol* src = symbol_lookup($4);
-            if (src == NULL || src->type != DT_TRUTH) {
-                fprintf(stderr,
-                    "[Muad'dib] Error: 'opposite' requires a truth variable.\n");
-            } else {
+            if (src != NULL && src->type == DT_TRUTH) {
                 Value v; v.ival = !src->value.ival;
                 symbol_assign($1, v);
+            } else {
+                fprintf(stderr, "[Muad'dib] Error: type mismatch for '%s'.\n", $1);
             }
             free($1); free($4);
         }
     | IDENTIFIER BECOMES expr SPLITBY expr ORDEFAULT expr SEMICOLON
         {
-            /*
-             * WHY handle splitby/ordefault in assignment and NOT in expr?
-             * Because 'ordefault' changes the TYPE of the result — it's
-             * not just an operator, it's a fallback contract. Keeping it
-             * in the assignment rule makes it clear this is a complete
+            Symbol* sym = symbol_lookup($1);
+            if (sym != NULL) {
+                if (sym->type == DT_WHOLE) {
+                    Value v; v.ival = (int)safe_divide($3, $5, $7);
+                    symbol_assign($1, v);
+                } else if (sym->type == DT_DECIMAL) {
+                    Value v; v.dval = safe_divide($3, $5, $7);
+                    symbol_assign($1, v);
+                } else {
+                    fprintf(stderr, "[Muad'dib] Error: type mismatch for '%s'.\n", $1);
+                }
+            }
+            free($1);
+        }
+    ;
+
+/* ── EXPRESSIONS ──────────────────────────────────────────────────────── */
+
+expr
+    : WHOLE_LIT             { $$ = (double)$1; }
+    | DECIMAL_LIT           { $$ = $1; }
+    | IDENTIFIER
+        {
+            Symbol* sym = symbol_lookup($1);
+            if (sym == NULL) {
+                fprintf(stderr, "[Muad'dib] Error: '%s' not declared.\n", $1);
+                $$ = 0.0;
+            } else if (sym->type == DT_WHOLE) {
+                $$ = (double)sym->value.ival;
+            } else if (sym->type == DT_DECIMAL) {
+                $$ = sym->value.dval;
+            } else {
+                fprintf(stderr, "[Muad'dib] Error: '%s' is not a number.\n", $1);
+                $$ = 0.0;
+            }
+            free($1);
+        }
+    | expr PLUS  expr       { $$ = $1 + $3; }
+    | expr MINUS expr       { $$ = $1 - $3; }
+    | expr MULT  expr       { $$ = $1 * $3; }
+    | expr DIV   expr
+        {
+            if ($3 == 0.0) {
+                fprintf(stderr, "[Muad'dib] Error: division by zero.\n");
+                $$ = 0.0;
+            } else {
+                $$ = $1 / $3;
+            }
+        }
+    ;
+
+/* ── WORD EXPRESSIONS ─────────────────────────────────────────────────── */
+
+word_expr
+    : IDENTIFIER WOVEN IDENTIFIER
+        {
+            Symbol* l = symbol_lookup($1);
+            Symbol* r = symbol_lookup($3);
+            if (l && r && l->type == DT_WORD && r->type == DT_WORD) {
+                size_t len = strlen(l->value.sval) + strlen(r->value.sval) + 1;
+                char* result = (char*)malloc(len);
+                strcpy(result, l->value.sval);
+                strcat(result, r->value.sval);
+                $$ = result;
+            } else {
+                fprintf(stderr, "[Muad'dib] Error: woven requires two words.\n");
+                $$ = strdup("");
+            }
+            free($1); free($3);
+        }
+    | IDENTIFIER WOVEN STRING_LIT
+        {
+            Symbol* l = symbol_lookup($1);
+            if (l && l->type == DT_WORD) {
+                size_t len = strlen(l->value.sval) + strlen($3) + 1;
+                char* result = (char*)malloc(len);
+                strcpy(result, l->value.sval);
+                strcat(result, $3);
+                $$ = result;
+            } else {
+                fprintf(stderr, "[Muad'dib] Error: woven requires a word on the left.\n");
+                $$ = strdup("");
+            }
+            free($1); free($3);
+        }
+    ;
+
+/* ── SHOW ─────────────────────────────────────────────────────────────── */
+
+show_stmt
+    : SHOW LITERAL COLON STRING_LIT SEMICOLON
+        { printf("%s\n", $4); free($4); }
+    | SHOW LITERAL COLON STRING_LIT THEN show_chain SEMICOLON
+        { printf("%s\n", $4); free($4); }
+    | SHOW VALUE COLON IDENTIFIER SEMICOLON
+        {
+            Symbol* sym = symbol_lookup($4);
+            if (sym != NULL) {
+                if (sym->type == DT_WHOLE) {
+                    printf("%d\n", sym->value.ival);
+                } else if (sym->type == DT_DECIMAL) {
+                    printf("%f\n", sym->value.dval);
+                } else if (sym->type == DT_TRUTH) {
+                    printf("%s\n", sym->value.ival ? "yes" : "no");
+                } else {
+                    fprintf(stderr, "[Muad'dib] Error: value: not a number or truth.\n");
+                }
+            } else {
+                fprintf(stderr, "[Muad'dib] Error: '%s' not declared.\n", $4);
+            }
+            free($4);
+        }
+    | SHOW TYPE_WORD COLON IDENTIFIER SEMICOLON
+        {
+            Symbol* sym = symbol_lookup($4);
+            if (sym != NULL && sym->type == DT_WORD) {
+                printf("%s\n", sym->value.sval);
+            } else {
+                fprintf(stderr, "[Muad'dib] Error: word: not a word.\n");
+            }
+            free($4);
+        }
+    ;
+
+show_chain
+    : VALUE COLON IDENTIFIER
+        {
+            Symbol* sym = symbol_lookup($3);
+            if (sym != NULL) {
+                if (sym->type == DT_WHOLE) {
+                    printf("%d\n", sym->value.ival);
+                } else if (sym->type == DT_DECIMAL) {
+                    printf("%f\n", sym->value.dval);
+                } else if (sym->type == DT_TRUTH) {
+                    printf("%s\n", sym->value.ival ? "yes" : "no");
+                } else {
+                    fprintf(stderr, "[Muad'dib] Error: value: not a number or truth.\n");
+                }
+            } else {
+                fprintf(stderr, "[Muad'dib] Error: '%s' not declared.\n", $3);
+            }
+            free($3);
+        }
+    | TYPE_WORD COLON IDENTIFIER
+        {
+            Symbol* sym = symbol_lookup($3);
+            if (sym != NULL && sym->type == DT_WORD) {
+                printf("%s\n", sym->value.sval);
+            } else {
+                fprintf(stderr, "[Muad'dib] Error: word: not a word.\n");
+            }
+            free($3);
+        }
+    | LITERAL COLON STRING_LIT
+        { printf("%s\n", $3); free($3); }
+    ;
+
+%%
+
+void yyerror(const char* msg) {
+    fprintf(stderr, "[Muad'dib Parser] %s at line %d\n", msg, line_num);
+}
              * safe-division STATEMENT, not just an expression.
              */
             Symbol* sym = symbol_lookup($1);

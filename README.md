@@ -58,6 +58,42 @@ show literal: "Level:" then value: level;
 
 ---
 
+
+## Scope Management Challenge
+
+### What is the Challenge?
+
+The scope management challenge required Muad'dib to support:
+
+- **Nested scopes**: Each `vision` block creates a new scope. Variables declared inside a vision are not visible outside it, but can shadow variables from outer scopes.
+- **Shadowing detection**: If a variable is declared in an inner scope with the same name as one in an outer scope, the compiler warns about shadowing.
+- **Scope stack**: The symbol table is now a stack of hash tables, one per scope level. Lookup starts at the top (innermost) scope and walks down.
+- **Pop and push**: Entering a vision pushes a new scope; leaving pops it, discarding all variables declared in that scope.
+
+### Implementation
+
+- See `symbols.h` and `symbols.c` for the stack-of-hash-tables design and detailed commentary.
+- The parser and lexer were updated to push/pop scopes at the right points.
+- Shadowing warnings are printed when a variable is redeclared in an inner scope.
+
+### Demo: test_scopes.mdb
+
+The file `test_scopes.mdb` exercises all scope features:
+
+- Declares variables at global and nested vision levels.
+- Shadows variables at multiple levels, triggering warnings.
+- Shows how assignments in inner scopes can update outer variables, but declarations are always local.
+- Demonstrates variable lifetime and visibility as scopes are entered and exited.
+
+Run it with:
+
+```bash
+./muaddib test_scopes.mdb
+```
+
+You will see output and shadowing warnings that illustrate the correct behavior for nested scopes and variable shadowing.
+
+---
 ## Language Reference
 
 ### Data Types
