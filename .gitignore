@@ -1,0 +1,13 @@
+# Compiled objects and executables
+*.o
+*.exe
+muaddib
+
+# Generated parser/lexer files
+lex.yy.c
+parser.tab.c
+parser.tab.h
+parser.output
+
+# Output files
+*.txt

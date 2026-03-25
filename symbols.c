@@ -239,8 +239,17 @@ void symbol_declare(const char* name, DataType type, Value value) {
             }
         }
         fprintf(stderr,
+<<<<<<< HEAD
             "[Muad'dib] Error: '%s' was never declared. Use 'is' first.\n",
             name);
+=======
+            "[Muad'dib] Error: Variable '%s' was already declared. "
+            "Use 'becomes' to change its value.\n", name);
+        if (type == DT_WORD && value.sval != NULL) {
+            free(value.sval);
+        }
+        return;
+>>>>>>> 2ae2cac6cde61bc3cf55c25bfe30c65febdca8e1
     }
 
     Symbol* symbol_lookup(const char* name) {

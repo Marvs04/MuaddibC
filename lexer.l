@@ -21,9 +21,22 @@ WHITESPACE  [ \t\r]+
 
 %%
 
+<<<<<<< HEAD
  /* WHITESPACE & NEWLINES */
 {WHITESPACE}            { }
 \n                      { line_num++; }
+=======
+ /*
+  * ── RULES ────────────────────────────────────────────────────────────────
+  * Format: PATTERN   { action }
+  *
+  * CRITICAL ORDER NOTE:
+  * Keywords MUST come before IDENTIFIER. Flex uses longest-match-first,
+  * then first-rule-first for ties. "is" has length 2. An IDENTIFIER
+  * starting with 'i' also has length 2 minimum. So we list keywords
+  * first to guarantee they're recognized as keywords, not identifiers.
+  */
+>>>>>>> 2ae2cac6cde61bc3cf55c25bfe30c65febdca8e1
 
  /* COMMENTS */
 "//"[^\n]*              { }
@@ -241,7 +254,9 @@ int yywrap(void) {
                      * We strdup to own the memory — yytext is overwritten
                      * on the next token.
                      */
-                    yylval.sval = strndup(yytext + 1, yyleng - 2);
+                    yylval.sval = malloc(yyleng - 1);
+                    strncpy(yylval.sval, yytext + 1, yyleng - 2);
+                    yylval.sval[yyleng - 2] = '\0';
                     return STRING_LIT;
                 }
 
