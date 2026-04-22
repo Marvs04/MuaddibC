@@ -1,0 +1,249 @@
+// ════════════════════════════════════════════════════════════════
+//
+//   M U A D ' D I B   —   D E M O S T R A C I Ó N   C O M P L E T A
+//
+//   Compilador construido con: Flex + Bison + C
+//   Este archivo demuestra TODAS las fases del compilador.
+//
+//   ESTRUCTURA:
+//     [I]   Análisis Léxico    — todos los tokens del lenguaje
+//     [II]  Análisis Sintáctico — toda la gramática en uso
+//     [III] Análisis Semántico  — tabla de símbolos, tipos, scopes
+//     [IV]  Ejecución           — salida correcta y errores controlados
+//
+// ════════════════════════════════════════════════════════════════
+
+#why:  "cada sección del demo cubre un criterio de la rúbrica"
+#todo: "agregar control de flujo (if/while) en la siguiente versión"
+#warn: "las secciones de error emiten mensajes a stderr — es correcto"
+
+// ────────────────────────────────────────────────────────────────
+// [I] ANÁLISIS LÉXICO — todos los tipos de tokens
+// ────────────────────────────────────────────────────────────────
+// El lexer reconoce: keywords, tipos, operadores, literales (5 tipos),
+// identificadores camelCase, comentarios (4 formas), y reporta
+// caracteres desconocidos con número de línea.
+
+purpose "I. ANALISIS LEXICO — todos los tokens";
+
+show literal: "┌─────────────────────────────────────────────┐";
+show literal: "│  I. TODOS LOS TIPOS DE DATOS Y LITERALES   │";
+show literal: "└─────────────────────────────────────────────┘";
+
+// 5 tipos de datos — un token diferente cada uno
+edad       is whole   = 17;           // WHOLE_LIT   → int
+altura     is decimal = 1.75;         // DECIMAL_LIT → double
+inicial    is letter  = 'P';          // CHAR_LIT    → char
+nombre     is word    = "Paul";       // STRING_LIT  → string
+esElegido  is truth   = yes;          // YES_VAL     → bool (1)
+haFallado  is truth   = no;           // NO_VAL      → bool (0)
+
+show literal: "  whole   (int)    →" then value: edad;
+show literal: "  decimal (double) →" then value: altura;
+show literal: "  word    (string) →" then word:  nombre;
+show literal: "  truth   yes      →" then value: esElegido;
+show literal: "  truth   no       →" then value: haFallado;
+show literal: "  (letter 'P' declarada — tipo char interno)";
+
+// ────────────────────────────────────────────────────────────────
+// [II] ANÁLISIS SINTÁCTICO — gramática completa en uso
+// ────────────────────────────────────────────────────────────────
+// El parser LALR(1) reduce: purpose_stmt, declaration_stmt,
+// assignment_stmt, show_stmt, vision_stmt, expr, word_expr.
+// La precedencia %left garantiza aritmética correcta.
+
+purpose "II. ANALISIS SINTACTICO — gramatica y precedencia";
+
+show literal: "┌─────────────────────────────────────────────┐";
+show literal: "│  II-A.  PRECEDENCIA DE OPERADORES           │";
+show literal: "└─────────────────────────────────────────────┘";
+
+a is whole = 0;
+b is whole = 0;
+
+// PRUEBA: sin precedencia → (2+3)*4 = 20. Con %left → 2+(3*4) = 14
+a becomes 2 + 3 * 4;
+show literal: "  2 + 3 * 4  ==" then value: a;
+show literal: "  (esperado: 14 — MULT antes que PLUS)";
+
+b becomes 10 - 4 / 2;
+show literal: "  10 - 4 / 2 ==" then value: b;
+show literal: "  (esperado: 8 — DIV antes que MINUS)";
+
+purpose "II-B. todos los tipos de sentencia";
+
+show literal: "┌─────────────────────────────────────────────┐";
+show literal: "│  II-B.  TODOS LOS TIPOS DE ASIGNACION       │";
+show literal: "└─────────────────────────────────────────────┘";
+
+// becomes con expr (whole y decimal)
+puntos  is whole   = 90;
+nivel   is decimal = 0.0;
+puntos  becomes edad + 3;
+nivel   becomes puntos splitby 5 ordefault 0.0;
+show literal: "  edad + 3 =" then value: puntos;
+show literal: "  puntos / 5 =" then value: nivel;
+
+// becomes con string literal
+nombre becomes "Muad'dib";
+show literal: "  nombre becomes =" then word: nombre;
+
+// becomes con woven (word_expr)
+casa      is word = "Atreides";
+completo  is word = nombre woven casa;
+show literal: "  nombre woven casa =" then word: completo;
+
+// becomes con opposite (truth negation)
+estaActivo  is truth = yes;
+estaInactivo is truth = no;
+estaInactivo becomes opposite estaActivo;
+show literal: "  estaActivo    =" then value: estaActivo;
+show literal: "  opposite de ^ =" then value: estaInactivo;
+
+// ────────────────────────────────────────────────────────────────
+// [III-A] ANÁLISIS SEMÁNTICO — tabla de símbolos
+// ────────────────────────────────────────────────────────────────
+// La tabla de símbolos es una PILA DE TABLAS HASH:
+//   - Hash djb2 (64 buckets por scope, O(1) lookup promedio)
+//   - Máximo 16 niveles de anidamiento
+//   - Declarar inserta en el scope actual
+//   - Asignar busca top-down y actualiza el primero que encuentre
+//   - Pop destruye todas las variables del scope cerrado
+
+purpose "III. ANALISIS SEMANTICO — tabla de simbolos y scopes";
+
+show literal: "┌─────────────────────────────────────────────┐";
+show literal: "│  III-A. SCOPING LEXICO CON VISION BLOCKS    │";
+show literal: "└─────────────────────────────────────────────┘";
+
+scoreGlobal is whole = 100;
+show literal: "  [global] scoreGlobal =" then value: scoreGlobal;
+
+vision "prueba-nivel-1"
+
+    purpose "scope nivel 1 — shadowing de nombre";
+
+    // 'nombre' ya existe en global → shadow warning (a stderr)
+    nombre      is word  = "Usul";
+    localScore  is whole = 11;
+
+    // 'scoreGlobal' NO está redeclarado → becomes actualiza el global
+    scoreGlobal becomes 200;
+
+    show literal: "  [nivel-1] nombre (shadow)     =" then word:  nombre;
+    show literal: "  [nivel-1] localScore (local)  =" then value: localScore;
+    show literal: "  [nivel-1] scoreGlobal (global modificado) =" then value: scoreGlobal;
+
+    vision "prueba-nivel-2"
+
+        purpose "scope nivel 2 — doble shadow";
+
+        nombre     is word  = "Kwisatz Haderach";
+        localTwo   is whole = 22;
+
+        show literal: "  [nivel-2] nombre (doble shadow) =" then word:  nombre;
+        show literal: "  [nivel-2] localScore (nivel-1 visible) =" then value: localScore;
+        show literal: "  [nivel-2] localTwo   (local)     =" then value: localTwo;
+
+    end;
+
+    // localTwo ya fue destruida — scope cerrado
+    show literal: "  [nivel-1 de vuelta] nombre =" then word: nombre;
+    show literal: "  (localTwo ya NO existe — fue destruida al cerrar nivel-2)";
+
+end;
+
+// Al volver al global: nombre vuelve a ser el original
+show literal: "  [global de vuelta] nombre (original) =" then word: nombre;
+show literal: "  [global de vuelta] scoreGlobal (modificado desde vision) =" then value: scoreGlobal;
+
+// ────────────────────────────────────────────────────────────────
+// [III-B] ANÁLISIS SEMÁNTICO — verificación de tipos
+// ────────────────────────────────────────────────────────────────
+// El compilador detecta: variable no declarada, redeclaración en mismo scope,
+// incompatibilidad de tipos. Los errores van a stderr y la ejecución continúa.
+
+purpose "III-B. VERIFICACION DE TIPOS — errores semanticos";
+
+show literal: "┌─────────────────────────────────────────────┐";
+show literal: "│  III-B. ERRORES SEMANTICOS (ver stderr)     │";
+show literal: "└─────────────────────────────────────────────┘";
+
+show literal: "  Provocando errores controlados...";
+show literal: "  (los mensajes de error aparecen en stderr)";
+
+// ERROR 1: incompatibilidad de tipos — asignar truth a word
+// estaActivo es truth, no puede recibir string
+estaActivo becomes "texto invalido";
+
+// ERROR 2: variable no declarada
+variableFantasma becomes 42;
+
+// ERROR 3: redeclaración en el mismo scope
+nombre is word = "duplicado";
+
+// El programa CONTINUA a pesar de los errores — robustez
+show literal: "  Ejecucion continua despues de los errores.";
+show literal: "  nombre (sin cambios tras error) =" then word: nombre;
+
+// ────────────────────────────────────────────────────────────────
+// [IV] EJECUCIÓN — división segura y operadores especiales
+// ────────────────────────────────────────────────────────────────
+
+purpose "IV. EJECUCION — operadores especiales";
+
+show literal: "┌─────────────────────────────────────────────┐";
+show literal: "│  IV-A. DIVISION SEGURA: splitby ordefault   │";
+show literal: "└─────────────────────────────────────────────┘";
+
+#why:  "splitby fuerza al programador a decidir el fallback al momento de escribir"
+#warn: "sin ordefault, la division por cero crashearía en C/Python/JavaScript"
+
+xitos    is whole   = 90;
+rondas   is whole   = 3;
+promedio is decimal = 0.0;
+roto     is decimal = 0.0;
+
+promedio becomes xitos splitby rondas ordefault 0.0;
+show literal: "  90 / 3 = " then value: promedio;
+
+// divisor == 0 → activa fallback, no crash
+roto becomes xitos splitby 0 ordefault 9999.99;
+show literal: "  90 / 0 = fallback " then value: roto;
+show literal: "  (sin crash, sin undefined behavior)";
+
+purpose "IV-B. woven — concatenacion explicita";
+
+show literal: "┌─────────────────────────────────────────────┐";
+show literal: "│  IV-B. WOVEN — concatenacion de strings     │";
+show literal: "└─────────────────────────────────────────────┘";
+
+#why: "woven reemplaza al + sobrecargado: un simbolo, un significado"
+titulo    is word = "el Muad'dib";
+resultado is word = nombre woven titulo;
+show literal: "  nombre woven titulo =" then word: resultado;
+
+// woven con literal de string
+saludo    is word = nombre woven "de la casa Atreides";
+show literal: "  nombre woven literal =" then word: saludo;
+
+// ────────────────────────────────────────────────────────────────
+// RESULTADO FINAL
+// ────────────────────────────────────────────────────────────────
+
+purpose "RESULTADO FINAL";
+
+show literal: "════════════════════════════════════════════";
+show literal: "  FASES DEMOSTRADAS:";
+show literal: "  [I]   Lexico  — 30+ tokens, 5 literales, 4 tipos de comentario";
+show literal: "  [II]  Sintaxis — gramatica completa, precedencia correcta";
+show literal: "  [III] Semantico — pila de hash, tipos, scopes, shadowing";
+show literal: "  [IV]  Ejecucion — salida correcta, errores controlados";
+show literal: "════════════════════════════════════════════";
+show literal: "  Candidato final:   " then word:  resultado;
+show literal: "  Score (from inner): " then value: scoreGlobal;
+show literal: "  Elegido:           " then value: esElegido;
+show literal: "════════════════════════════════════════════";
+show literal: "  Paul Atreides ha pasado la prueba.";
+show literal: "  El Muad'dib ha llegado.";
+show literal: "════════════════════════════════════════════";

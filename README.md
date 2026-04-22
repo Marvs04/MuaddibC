@@ -2,103 +2,84 @@
 
 > *"He who controls the spice controls the universe."* — Frank Herbert, Dune
 
-A programming language designed for **humans first, machines second**.
+A programming language designed for **humans first, machines second.**  
+Built with **Flex + Bison + C** for a Compilers & Interpreters course.
 
-Built with Flex (lexer) + Bison/Yacc (parser) + C as part of a Compilers & Interpreters course.
+---
+
+## Quick Start (Ubuntu / Debian / Linux)
+
+### 1. Install dependencies
+
+```bash
+sudo apt update
+sudo apt install flex bison gcc make -y
+```
+
+### 2. Clone and build
+
+```bash
+git clone https://github.com/Marvs04/MuaddibC.git
+cd MuaddibC
+make
+```
+
+You should see:
+
+```
+Build complete. Run with: ./muaddib test.mdb
+```
+
+### 3. Run the full demo
+
+```bash
+./muaddib demo_completo.mdb
+```
+
+This runs the complete demonstration covering all compiler phases.  
+Errors printed to `stderr` in the demo are **intentional** — they show error detection working.
+
+To see stdout and stderr separately:
+
+```bash
+./muaddib demo_completo.mdb 2>errors.log   # only clean output
+./muaddib demo_completo.mdb 2>&1            # everything mixed (default)
+```
+
+### 4. Other test files
+
+```bash
+./muaddib test_scopes.mdb    # nested scopes and shadowing
+./muaddib test_bug.mdb       # intentional type error
+./muaddib dictionary.mdb     # full language reference with comments
+```
 
 ---
 
 ## The Problem Muad'dib Solves
 
-Most programming languages were designed thinking about the machine first and the programmer second. The result: cryptic type names (`int`, `bool`, `char`), invisible bugs (`!x` vs `x`), and code that only its author understands.
+Most languages were designed for the machine first. The result: cryptic type names, invisible bugs, and code only its author understands.
 
-Muad'dib attacks specific, real problems at the **syntax level**:
+Muad'dib attacks specific problems at the **syntax level**:
 
-| Problem | Muad'dib's solution |
+| Problem | Solution |
 |---|---|
-| `=` means both declare AND assign | `is` declares, `becomes` assigns — they look different because they ARE different |
-| `int`, `bool` mean nothing in plain language | `whole`, `truth`, `decimal` describe what they hold |
-| Division by zero crashes at runtime | `splitby ordefault` forces you to handle it when you write it |
-| `+` is used for both math and string concat | `woven` is exclusively for joining text |
-| `!x` is invisible, causes silent bugs | `opposite x` — you cannot miss a full word |
-| Code has no structure or stated intent | `purpose` is a required statement before every logic block |
-| Comments are unstructured noise | `#why:`, `#todo:`, `#warn:` — comments have categories |
+| `=` means both declare AND assign | `is` declares. `becomes` assigns. They look different because they ARE different. |
+| `int`, `bool` mean nothing in plain language | `whole`, `truth`, `decimal` describe what they hold. |
+| Division by zero crashes at runtime | `splitby ordefault` forces you to handle it when you write it. |
+| `+` used for both math and string concat | `woven` is exclusively for joining text. |
+| `!x` is invisible, causes silent bugs | `opposite x` — you cannot miss a full word. |
+| No stated intent before logic blocks | `purpose` is required before every section. |
+| Comments are unstructured noise | `#why:`, `#todo:`, `#warn:` — comments have categories. |
+| Shadowing is completely silent | `vision` blocks emit explicit named warnings. |
 
 ---
 
-## Quick Look
-
-```
-#why: "program to register a new user"
-
-purpose "define user identity";
-userName is word    = "Paul";
-userAge  is whole   = 17;
-isActive is truth   = no;
-
-purpose "update identity after login";
-userName becomes "Muad'dib";
-isActive becomes yes;
-
-purpose "show user info";
-show literal: "Name:"   then word:  userName;
-show literal: "Age:"    then value: userAge;
-show literal: "Active:" then value: isActive;
-
-purpose "combine name and title";
-userTitle is word = "Atreides";
-fullName  is word = userName woven userTitle;
-show literal: "Full name:" then word: fullName;
-
-purpose "safe division example";
-level is decimal = 0.0;
-level becomes userAge splitby 5 ordefault 0.0;
-show literal: "Level:" then value: level;
-```
-
----
-
-
-## Scope Management Challenge
-
-### What is the Challenge?
-
-The scope management challenge required Muad'dib to support:
-
-- **Nested scopes**: Each `vision` block creates a new scope. Variables declared inside a vision are not visible outside it, but can shadow variables from outer scopes.
-- **Shadowing detection**: If a variable is declared in an inner scope with the same name as one in an outer scope, the compiler warns about shadowing.
-- **Scope stack**: The symbol table is now a stack of hash tables, one per scope level. Lookup starts at the top (innermost) scope and walks down.
-- **Pop and push**: Entering a vision pushes a new scope; leaving pops it, discarding all variables declared in that scope.
-
-### Implementation
-
-- See `symbols.h` and `symbols.c` for the stack-of-hash-tables design and detailed commentary.
-- The parser and lexer were updated to push/pop scopes at the right points.
-- Shadowing warnings are printed when a variable is redeclared in an inner scope.
-
-### Demo: test_scopes.mdb
-
-The file `test_scopes.mdb` exercises all scope features:
-
-- Declares variables at global and nested vision levels.
-- Shadows variables at multiple levels, triggering warnings.
-- Shows how assignments in inner scopes can update outer variables, but declarations are always local.
-- Demonstrates variable lifetime and visibility as scopes are entered and exited.
-
-Run it with:
-
-```bash
-./muaddib test_scopes.mdb
-```
-
-You will see output and shadowing warnings that illustrate the correct behavior for nested scopes and variable shadowing.
-
----
 ## Language Reference
 
 ### Data Types
 
-| Muad'dib | Equivalent | Example |
+| Muad'dib | C equivalent | Example |
 |---|---|---|
 | `whole` | `int` | `17`, `-3` |
 | `decimal` | `double` | `3.14`, `-0.5` |
@@ -106,7 +87,7 @@ You will see output and shadowing warnings that illustrate the correct behavior 
 | `word` | `string` | `"Paul"` |
 | `truth` | `bool` | `yes` / `no` |
 
-### Declaration vs Assignment
+### Syntax
 
 ```
 // Declaration — creates the variable for the first time
@@ -114,38 +95,11 @@ name is TYPE = value;
 
 // Assignment — changes an existing variable
 name becomes newValue;
-```
 
-### Print (show)
+// Arithmetic (precedence: * / before + -)
+result becomes a + b * c;
 
-```
-show literal: "text here";
-show value:   numericVariable;
-show word:    wordVariable;
-
-// Chaining with 'then'
-show literal: "Name:" then word: userName;
-```
-
-### Comments
-
-```
-// general comment
-#why:  "explains a design decision"
-#todo: "marks something to do later"
-#warn: "flags something dangerous"
-```
-
-### Operators
-
-```
-// Arithmetic
-a + b       // addition
-a - b       // subtraction
-a * b       // multiplication
-a / b       // division (use splitby for safety)
-
-// Safe division
+// Safe division — fallback required at write time
 result becomes a splitby b ordefault fallback;
 
 // String concatenation
@@ -153,94 +107,129 @@ full is word = first woven last;
 
 // Logical negation
 isOff is truth = opposite isOn;
+
+// Output
+show literal: "text here";
+show value:   someNumber;
+show word:    someString;
+show literal: "label:" then value: someNumber;
+
+// Scope block
+vision "block-name"
+    // variables here are local to this block
+    local is whole = 42;
+end;
+
+// Intent statement (required before logic blocks)
+purpose "describe what follows";
+
+// Structured comments (all ignored by compiler)
+#why:  "design decision"
+#todo: "pending task"
+#warn: "potential issue"
+//     general comment
 ```
 
 ### Variable Naming Rules
 
 - Must start with a **lowercase letter**
 - Uses **camelCase** — enforced by the lexer
-- No underscores, no hyphens, no spaces
 - Cannot be a reserved keyword
 
 ```
-// Valid
-userName, userAge, isActive, x, totalScore
-
-// Invalid
-UserName, user_name, 2fast, is, becomes
+// Valid:   userName, userAge, x, totalScore
+// Invalid: UserName, user_name, 2fast, is, becomes
 ```
 
 ---
 
-## Files
+## Project Structure
 
 ```
-muaddib/
-├── lexer.l         — Flex lexer: tokenizes Muad'dib source code
-├── parser.y        — Bison parser: grammar rules and semantic actions
-├── symbols.h       — Symbol table interface
-├── symbols.c       — Symbol table implementation (linked list)
-├── main.c          — Entry point, file/stdin handling
-├── Makefile        — Build system with make, make test, make clean
-└── test.mdb        — Test program exercising every language feature
+MuaddibC/
+├── lexer.l            — Flex lexer: tokenizes source code
+├── parser.y           — Bison parser: grammar rules + semantic actions
+├── symbols.h          — Symbol table interface
+├── symbols.c          — Symbol table: stack of hash tables (djb2)
+├── main.c             — Entry point, file/stdin handling
+├── Makefile           — Build system
+├── demo_completo.mdb  — Full demo covering all compiler phases
+├── test_scopes.mdb    — Nested scopes and shadowing
+├── test_bug.mdb       — Error detection demo
+└── dictionary.mdb     — Complete language reference
 ```
 
 ---
 
-## Build & Run
-
-**Requirements:** `flex`, `bison`, `gcc`, `make`
+## Build Targets
 
 ```bash
-# Build
-make
-
-# Run a .mdb file
-./muaddib test.mdb
-
-# Run all tests
-make test
-
-# Clean generated files
-make clean
+make          # build muaddib executable
+make test     # build + run test_scopes.mdb
+make debug    # build with debug symbols (for gdb)
+make clean    # remove all generated files
 ```
 
 ---
 
-## Design Decisions (The Why)
+## Compiler Architecture
 
-Every decision in this language has a reason. Here are the most important ones:
+```
+Source (.mdb)
+    │
+    ▼
+[Flex — lexer.l]          tokenizes: keywords, literals, identifiers
+    │  tokens
+    ▼
+[Bison — parser.y]        LALR(1) grammar, semantic actions inline
+    │  reductions
+    ▼
+[Symbol Table — symbols.c] stack of hash tables, one per scope level
+    │
+    ▼
+Output (stdout) + Errors (stderr)
+```
 
-**Why `is` and not `=` for declaration?**
-Because `=` in most languages does two completely different things depending on context. `int x = 5` declares. `x = 10` assigns. They look almost identical. `is` and `becomes` are visually and semantically distinct — you cannot confuse them.
-
-**Why `whole` and not `int`?**
-`int` is short for *integer*, a math term. `whole` means "a whole number" — something any person understands without knowing math terminology. The type name should describe what it holds, not its historical origin.
-
-**Why camelCase enforced in the lexer?**
-So no one ever debates it. The regex `[a-z][a-zA-Z0-9]*` rejects `user_name` and `UserName` at the lexer level. The rule is not a style guide — it's a compile error.
-
-**Why `splitby ordefault` and not just `/`?**
-Division by zero is a runtime error in every other language. You discover it when the program crashes, not when you write it. `ordefault` forces you to decide the fallback *at the moment of writing*, not after the crash.
-
-**Why `woven` and not `+`?**
-`"hello" + "world"` and `3 + 4` look the same but mean different things. In JavaScript, `"3" + 3 = "33"`. The `+` operator is overloaded with confusing behavior. `woven` is exclusively for joining text. There is no ambiguity.
-
-**Why `#why:`, `#todo:`, `#warn:` and not just `//`?**
-Because comments are for future humans, not for the compiler. Knowing that a comment is a *reason*, a *task*, or a *warning* is completely different information. Categorizing them makes any codebase more readable, even at this scale.
+The compiler uses a **syntax-directed interpreter** model: Bison semantic actions evaluate expressions and execute statements directly during parsing. No separate intermediate representation is generated.
 
 ---
 
-## Course Context
+## Scope Management
 
-This project was built for a Compilers & Interpreters course. The implementation is limited to what was covered in class:
+Muad'dib uses **lexical scoping** via `vision` blocks:
 
-- Flex for lexical analysis
-- Bison/Yacc for parsing
-- C for symbol table and helper functions
-- No control flow (if, while) in this version
+```
+vision "block-name"
+    x is whole = 10;    // local to this block
+    // outer variables are visible here
+    // declaring a name that exists outside triggers a shadow warning
+end;
+// x is destroyed here
+```
+
+Internally: a **stack of hash tables** (one table per scope, djb2 hash, 64 buckets).  
+- `DECLARE` → inserts into top scope only  
+- `ASSIGN` → searches top-down, updates closest match  
+- `POP` → frees all variables in that scope
 
 ---
 
-*"A beginning is a very delicate time."* — Dune
+## Design Decisions
 
+**Why `is` and not `=` for declaration?**  
+`=` in most languages does two completely different things. `is` and `becomes` are visually and semantically distinct — you cannot confuse them.
+
+**Why `whole` and not `int`?**  
+`int` is short for *integer*, a math term. `whole` means "a whole number" — something anyone understands without CS background.
+
+**Why camelCase enforced in the lexer?**  
+The regex `[a-z][a-zA-Z0-9]*` rejects `user_name` and `UserName` at the lexer level. It is not a style guide — it is a compile error.
+
+**Why `splitby ordefault` and not just `/`?**  
+Division by zero is a runtime error in every other language. You discover it when the program crashes. `ordefault` forces you to decide the fallback *at the moment of writing*, not after the crash.
+
+**Why `woven` and not `+`?**  
+`"hello" + "world"` and `3 + 4` look the same but mean different things. `woven` is exclusively for joining text. No ambiguity.
+
+**Why a stack of hash tables for scopes?**  
+A single flat table would require scanning everything to pop a scope. With a stack, `pop_scope()` frees one table. djb2 gives O(1) average lookup. Each scope has 64 buckets — enough for any realistic program at this scale.
