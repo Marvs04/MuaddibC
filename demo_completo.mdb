@@ -223,6 +223,90 @@ resultado becomes lenguaje woven "compiler";
 show literal: "  lenguaje woven literal =>" then word: resultado;
 
 // ────────────────────────────────────────────────────────────────
+// [V] BONUS FLEX — todo el lenguaje junto, 3 scopes en cadena
+//
+// Esta seccion demuestra que el compilador sostiene estado correcto
+// a traves de multiples tipos, scopes anidados, asignaciones
+// cruzadas y operadores mixtos — todo en una sola ejecucion.
+// ────────────────────────────────────────────────────────────────
+
+purpose "V. BONUS — todo el lenguaje en una sola ejecucion";
+
+show literal: "┌─────────────────────────────────────────────┐";
+show literal: "│     V. BONUS FLEX — estado completo         │";
+show literal: "└─────────────────────────────────────────────┘";
+
+// Variables globales de todos los tipos
+gNombre  is word    = "global";
+gConteo  is whole   = 0;
+gTotal   is decimal = 0.0;
+gActivo  is truth   = yes;
+
+vision "capa-uno"
+
+    purpose "capa 1 — operaciones sobre scope externo";
+
+    localUno  is whole = 10;
+    gConteo   becomes gConteo + localUno;       // modifica global
+    gTotal    becomes gConteo splitby 3 ordefault 0.0;
+
+    show literal: "  [capa-uno] gConteo actualizado =>" then value: gConteo;
+    show literal: "  [capa-uno] gTotal calculado    =>" then value: gTotal;
+
+    vision "capa-dos"
+
+        purpose "capa 2 — expresion compleja y mas tipos";
+
+        localDos    is whole   = 5;
+        localTexto  is word    = "capa";
+        localFlag   is truth   = no;
+
+        // expresion con 4 operadores — evalua correctamente por precedencia
+        localUno  becomes localUno * 2 + localDos - 1;
+        gConteo   becomes gConteo + localDos;
+
+        show literal: "  [capa-dos] localUno * 2 + 5 - 1  =>" then value: localUno;
+        show literal: "  [capa-dos] gConteo acumulado     =>" then value: gConteo;
+        show literal: "  [capa-dos] localTexto            =>" then word:  localTexto;
+
+        localFlag becomes opposite gActivo;
+        show literal: "  [capa-dos] opposite gActivo      =>" then value: localFlag;
+
+        vision "capa-tres"
+
+            purpose "capa 3 — acceso a todos los niveles superiores";
+
+            localTres is whole = 1;
+
+            // visible: gConteo (global), localUno (capa-1), localDos (capa-2)
+            localTres becomes gConteo + localUno + localDos;
+
+            show literal: "  [capa-tres] gConteo + localUno + localDos =>" then value: localTres;
+            show literal: "  [capa-tres] gNombre (global visible)      =>" then word:  gNombre;
+
+            // woven desde 3 niveles de profundidad — accede variable de capa-2
+            gNombre becomes localTexto woven "tres";
+            show literal: "  [capa-tres] gNombre modificado            =>" then word:  gNombre;
+
+        end;
+
+        // capa-tres destruida — localTres ya no existe
+        show literal: "  [capa-dos de vuelta] gNombre =>" then word: gNombre;
+
+    end;
+
+    // capa-dos destruida — localDos, localTexto, localFlag ya no existen
+    show literal: "  [capa-uno de vuelta] gConteo =>" then value: gConteo;
+
+end;
+
+// Todos los valores globales reflejan los cambios hechos desde adentro
+show literal: "  [global final] gNombre  =>" then word:  gNombre;
+show literal: "  [global final] gConteo  =>" then value: gConteo;
+show literal: "  [global final] gTotal   =>" then value: gTotal;
+show literal: "  [global final] gActivo  =>" then value: gActivo;
+
+// ────────────────────────────────────────────────────────────────
 // RESUMEN
 // ────────────────────────────────────────────────────────────────
 
@@ -234,8 +318,9 @@ show literal: "  [I]   Lexico    — 30+ tokens, 5 literales, 4 comentarios";
 show literal: "  [II]  Sintactico — gramatica completa, precedencia correcta";
 show literal: "  [III] Semantico  — hash table, tipos, scopes, shadowing";
 show literal: "  [IV]  Ejecucion  — salida correcta, errores controlados";
+show literal: "  [V]   Bonus      — 3 scopes anidados, estado global persistente";
 show literal: "════════════════════════════════════════════════";
-show literal: "  resultado final  =>" then word:  resultado;
-show literal: "  score global     =>" then value: scoreGlobal;
-show literal: "  activo           =>" then value: activo;
+show literal: "  gNombre final    =>" then word:  gNombre;
+show literal: "  gConteo final    =>" then value: gConteo;
+show literal: "  activo global    =>" then value: gActivo;
 show literal: "════════════════════════════════════════════════";
