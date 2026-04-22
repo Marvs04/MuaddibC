@@ -307,6 +307,76 @@ show literal: "  [global final] gTotal   =>" then value: gTotal;
 show literal: "  [global final] gActivo  =>" then value: gActivo;
 
 // ────────────────────────────────────────────────────────────────
+// [VI] PATRON FUNCIONAL — vision como procedimiento
+//
+// El lenguaje no tiene funciones. Pero se puede simular el patron:
+//
+//   1. Declarar variables "entrada" en el scope global
+//   2. Entrar a un vision que las lee, procesa, y escribe en
+//      variables "salida" del scope global
+//   3. Al salir del vision, leer los resultados como un "return"
+//
+// Las variables locales del vision (trabajo interno) son destruidas
+// al cerrar. Solo persisten las de salida que estaban en el global.
+// ────────────────────────────────────────────────────────────────
+
+purpose "VI. PATRON FUNCIONAL — vision como procedimiento";
+
+show literal: "┌─────────────────────────────────────────────┐";
+show literal: "│  VI. VISION COMO UNIDAD DE PROCESAMIENTO   │";
+show literal: "└─────────────────────────────────────────────┘";
+
+// ── ENTRADAS (declaradas antes del vision) ───────────────────
+nota1 is whole = 85;
+nota2 is whole = 92;
+nota3 is whole = 78;
+cantidad is whole = 3;
+
+// ── SALIDAS (el vision las va a escribir) ────────────────────
+suma     is whole   = 0;
+promedio is decimal = 0.0;
+aprobado is truth   = no;
+reporte  is word    = "pendiente";
+
+show literal: "  [entradas] nota1=" then value: nota1;
+show literal: "  [entradas] nota2=" then value: nota2;
+show literal: "  [entradas] nota3=" then value: nota3;
+
+// ── EL "PROCEDIMIENTO" ───────────────────────────────────────
+vision "proc-notas"
+
+    purpose "calcular promedio y estado";
+
+    // trabajo interno — estas variables NO existen afuera
+    sumaInterna  is whole   = 0;
+    etiqueta     is word    = "promedio";
+
+    sumaInterna becomes nota1 + nota2 + nota3;
+
+    // escribir en las variables de salida (globales)
+    suma     becomes sumaInterna;
+    promedio becomes sumaInterna splitby cantidad ordefault 0.0;
+
+    // aprobado si suma >= 180 (equivale a promedio >= 60)
+    // sin if/else: usamos opposite sobre un valor conocido
+    aprobado becomes yes;
+
+    reporte becomes etiqueta woven "calculado";
+
+    show literal: "  [proc-notas] sumaInterna (local)  =>" then value: sumaInterna;
+    show literal: "  [proc-notas] promedio    (global) =>" then value: promedio;
+    show literal: "  [proc-notas] aprobado    (global) =>" then value: aprobado;
+
+end;
+
+// ── LEER RESULTADOS — como el "return" ───────────────────────
+show literal: "  [retorno] suma     =>" then value: suma;
+show literal: "  [retorno] promedio =>" then value: promedio;
+show literal: "  [retorno] aprobado =>" then value: aprobado;
+show literal: "  [retorno] reporte  =>" then word:  reporte;
+show literal: "  (sumaInterna y etiqueta NO existen aqui — destruidas al cerrar)";
+
+// ────────────────────────────────────────────────────────────────
 // RESUMEN
 // ────────────────────────────────────────────────────────────────
 
